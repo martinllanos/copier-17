@@ -231,12 +231,11 @@ def write_code_workspace_file(c, cw_path=None):
                 addon / "__openerp__.py"
             ).is_file():
                 if subrepo.name == "odoo":
-                    local_path = "${workspaceFolder:%s}/addons/%s/" % (
-                        subrepo.name,
-                        addon.name,
+                    local_path = (
+                        f"${{workspaceFolder:{subrepo.name}}}/addons/{addon.name}/"
                     )
                 else:
-                    local_path = "${workspaceFolder:%s}/%s" % (subrepo.name, addon.name)
+                    local_path = f"${{workspaceFolder:{subrepo.name}}}/{addon.name}"
                 debugpy_configuration["pathMappings"].append(
                     {
                         "localRoot": local_path,
@@ -244,10 +243,7 @@ def write_code_workspace_file(c, cw_path=None):
                     }
                 )
                 url = f"http://localhost:{ODOO_VERSION:.0f}069/{addon.name}/static/"
-                path = "${workspaceFolder:%s}/%s/static/" % (
-                    subrepo.name,
-                    addon.relative_to(subrepo),
-                )
+                path = f"${{workspaceFolder:{subrepo.name}}}/{addon.relative_to(subrepo)}/static"
                 firefox_configuration["pathMappings"].append({"url": url, "path": path})
                 chrome_configuration["pathMapping"][url] = path
     cw_config["tasks"] = {
@@ -773,7 +769,7 @@ def test(
             continue
         if m_to_skip not in modules_list:
             _logger.warn(
-                "%s not found in the list of addons to test: %s" % (m_to_skip, modules)
+                "%s not found in the list of addons to test: %s", (m_to_skip, modules)
             )
         modules_list.remove(m_to_skip)
     modules = ",".join(modules_list)
@@ -968,13 +964,10 @@ def snapshot(
     Uses click-odoo-copydb behind the scenes to make a snapshot.
     """
     if not destination_db:
-        destination_db = "%s-%s" % (
-            source_db,
-            datetime.now().strftime("%Y_%m_%d-%H_%M"),
-        )
+        destination_db = f"{source_db}-{datetime.now().strftime('%Y_%m_%d-%H_%M')}"
     with c.cd(str(PROJECT_ROOT)):
         cur_state = c.run(DOCKER_COMPOSE_CMD + " stop odoo db", pty=True).stdout
-        _logger.info("Snapshoting current %s DB to %s" % (source_db, destination_db))
+        _logger.info("Snapshoting current %s DB to %s", (source_db, destination_db))
         _run = DOCKER_COMPOSE_CMD + " run --rm -l traefik.enable=false odoo"
         c.run(
             f"{_run} click-odoo-copydb {source_db} {destination_db}",
@@ -1031,7 +1024,7 @@ def restore_snapshot(
                 raise exceptions.PlatformError(
                     "No snapshot found for destination_db %s" % destination_db
                 )
-        _logger.info("Restoring snapshot %s to %s" % (snapshot_name, destination_db))
+        _logger.info("Restoring snapshot %s to %s", (snapshot_name, destination_db))
         _run = DOCKER_COMPOSE_CMD + " run --rm -l traefik.enable=false odoo"
         c.run(
             f"{_run} click-odoo-dropdb {destination_db}",
